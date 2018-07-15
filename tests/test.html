@@ -1,0 +1,107 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+	<title>Test proxify</title>
+	<link rel="stylesheet" href="../node_modules/mocha/mocha.css">
+	<script src="../node_modules/mocha/mocha.js"></script>
+	<script src="../node_modules/chai/chai.js"></script>
+	<script src="../src/proxify.js"></script>
+
+	<script src="//localhost:35750/livereload.js"></script>
+
+</head>
+<body>
+<h1>Test proxify</h1>
+
+<div id="mocha"></div>
+
+<script>
+	window.mocha.setup('tdd');
+
+	suite('proxify', function () {
+		const
+			suite = window.suite,
+			test = window.test,
+			proxify = window.proxify,
+			expect = chai.expect;
+
+let data = {
+	x: 1,
+	deep: {
+		y: 2
+	}
+};
+
+data = proxify(data, {
+	onChange: function (value, key, target) {
+		console.log('changed', key, value);
+	}
+});
+
+		test('it should proxify the entire object', function () {
+			let data = {
+				x: 1,
+				a: [1, 2, {
+					y: 2,
+					z: 3,
+					getValues: function () {
+						return [this.y, this.z]
+					}
+				}]
+			};
+			const events = [];
+			data = proxify(data, {
+				onSet: function (value, key, target) {
+					// console.log(' - ', prop, value);
+					events.push(prop);
+				}
+			});
+
+			data.x = 9;
+			data.a[0] = 66;
+			data.a[2].y = 33;
+
+			data.foo = 'bar';
+			data.zap = { a: 1, b: 2 };
+			data.zap.a = 99;
+			// does not emit when not changed
+			data.zap.a = 99;
+			data.zap.a = 99;
+			data.zap.a = 99;
+
+			expect(events.join(',')).to.equal('x,0,y,foo,zap,a');
+
+			expect(data.a[2].getValues().join(',')).to.equal('33,3');
+
+		});
+
+		test('it should handle complex objects', function () {
+			setTimeout(() => {
+				const node = document.createElement('div');
+				node.innerHTML = 'foo';
+				let data = {
+					d: new Date('12, 12, 2018'),
+					div: node,
+					win: window
+				};
+				const events = [];
+				data = proxify(data, {
+					onChange: function (value, key, target) {
+						// console.log('change', prop, value);
+						events.push(prop);
+					}
+				});
+				data.div.innerHTML = 'bar';
+				data.win.zap = 999;
+				expect(data.d.getFullYear()).to.equal(2018);
+				expect(events.join(',')).to.equal('innerHTML');
+
+			}, 1);
+		});
+	});
+
+	window.mocha.run();
+
+</script>
+</body>
+</html>
