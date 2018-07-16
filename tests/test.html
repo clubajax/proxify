@@ -25,6 +25,9 @@
 			proxify = window.proxify,
 			expect = chai.expect;
 
+		function copy (data) {
+			return JSON.parse(JSON.stringify(data));
+		}
 		test('it should proxify the entire object', function () {
 			let data = {
 				x: 1,
@@ -89,11 +92,46 @@
 
 			// omits o2, z, and zz:
 			expect(events.join(',')).to.equal('o1,xx,yy');
-
-
 		});
 
-		test.only('it should handle complex objects', function () {
+		test('it should not proxy filtered keys #2', function () {
+			let data = {
+				rows: [
+					{
+						id: 1,
+						value: 'Coke',
+						translations: [{ 'en-US': 'Coke' }]
+					}, {
+						id: 2,
+						value: 'Pepsi',
+						translations: [{ 'en-US': 'Pepsi' }]
+
+					}
+				]
+			};
+			const events = [];
+			data = proxify(data, {
+				onSet: function (value, key, target) {
+					console.log(' - ', key, value, target);
+					if (key === 'value') {
+						const translation = target.translations[0];
+						translation[Object.keys(translation)[0]] = value;
+					}
+					events.push(key);
+				},
+				filter (key) {
+					return /translations|-/.test(key);
+				}
+			});
+
+			data.rows[0].value = 'Tab';
+			console.log('data', data);
+
+			expect(data.rows[0].translations.isProxy).to.equal(undefined);
+			expect(data.rows[0].translations[0]['en-US'].isProxy).to.equal(undefined);
+		});
+
+		test('it should handle complex objects', function () {
 			setTimeout(() => {
 				const node = document.createElement('div');
 				node.innerHTML = 'foo';
@@ -125,6 +163,49 @@
 				expect(events.join(',')).to.equal('innerHTML');
 
 			}, 1);
+		});
+
+		test('it should not layer proxies (VISUAL)', function () {
+			let data = {
+				a: [{ x: 1 }, { z: 1 }]
+			};
+			const events = [];
+			data = proxify(data, {
+				onSet: function (value, key, target) {
+					// console.log(' - ', key, value);
+					events.push(key);
+				},
+				filter (key) {
+					return /z|o2/.test(key);
+				}
+			});
+
+			expect(data.isProxy).to.equal(true);
+
+			data.a[0] = {x:2};
+			data.a[1] = {z:2};
+
+			data.a[0] = {x:3};
+			data.a[1] = {z:3};
+
+			data.a[0] = {x:4, o:{ o:{ o:1 }}};
+			data.a[1] = {z:4, o:{ o:{ o:1 }}};
+
+			let temp = data.a[1];
+			data.a[1] = data.a[0];
+			data.a[0] = temp;
+
+			temp = data.a[1];
+			data.a[1] = data.a[0];
+			data.a[0] = temp;
+
+			// inspecting the object should reveal a mimal amount of depth
+			// with checking isProxy in isSimpleObject, this layer gets 28 levels deep
+			console.log('data', data);
+
+			console.log('copy', copy(data));
+			// omits o2, z, and zz:
+			// expect(events.join(',')).to.equal('o1,xx,yy');
 		});
 	});
 

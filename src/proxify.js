@@ -13,7 +13,7 @@
 		return instances.some(I => data instanceof I);
 	}
 	function isSimpleObject (data) {
-		return typeof data === 'object' && data !== null && data !== global && !isInstanceOf(data);
+		return typeof data === 'object' && data !== null && data !== global && !data.isProxy && !isInstanceOf(data);
 	}
 
 	return function proxify (data, options) {
@@ -50,6 +50,9 @@
 				});
 			} else {
 				Object.keys(data).forEach((key) => {
+					if (filter(key)) {
+						return;
+					}
 					const prop = data[key];
 					if (typeof prop === 'object' && prop !== null) {
 						data[key] = proxify(prop, options);
