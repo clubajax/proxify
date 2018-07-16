@@ -25,19 +25,6 @@
 			proxify = window.proxify,
 			expect = chai.expect;
 
-let data = {
-	x: 1,
-	deep: {
-		y: 2
-	}
-};
-
-data = proxify(data, {
-	onChange: function (value, key, target) {
-		console.log('changed', key, value);
-	}
-});
-
 		test('it should proxify the entire object', function () {
 			let data = {
 				x: 1,
@@ -52,8 +39,8 @@ data = proxify(data, {
 			const events = [];
 			data = proxify(data, {
 				onSet: function (value, key, target) {
-					// console.log(' - ', prop, value);
-					events.push(prop);
+					// console.log(' - ', key, value);
+					events.push(key);
 				}
 			});
 
@@ -75,24 +62,65 @@ data = proxify(data, {
 
 		});
 
-		test('it should handle complex objects', function () {
+		test('it should not proxy filtered keys', function () {
+			let data = {
+				o1: { x: 1 },
+				o2: { z: 2 }
+			};
+			const events = [];
+			data = proxify(data, {
+				onSet: function (value, key, target) {
+					// console.log(' - ', key, value);
+					events.push(key);
+				},
+				filter (key) {
+					return /z|o2/.test(key);
+				}
+			});
+
+			expect(data.isProxy).to.equal(true);
+
+			data.o1 = { xx: 11 };
+			data.o1.xx = { yy: 22 };
+			data.o1.xx.yy = 3;
+			data.o2.z = 3;
+			data.o2 = { zz: 4 };
+			data.o2.zz = 44;
+
+			// omits o2, z, and zz:
+			expect(events.join(',')).to.equal('o1,xx,yy');
+
+
+		});
+
+		test.only('it should handle complex objects', function () {
 			setTimeout(() => {
 				const node = document.createElement('div');
 				node.innerHTML = 'foo';
 				let data = {
 					d: new Date('12, 12, 2018'),
 					div: node,
-					win: window
+					win: window,
+					e: new Error('error'),
+					p: new Promise(() => {}),
+					m: new Map([[0, 'me']])
 				};
 				const events = [];
 				data = proxify(data, {
-					onChange: function (value, key, target) {
-						// console.log('change', prop, value);
-						events.push(prop);
+					onSet (value, key) {
+						console.log('onSet', key);
+						events.push(key);
 					}
 				});
+				// will be handled by proxy:
 				data.div.innerHTML = 'bar';
+
+				// will not have a proxy:
 				data.win.zap = 999;
+				data.e.message = 'foo';
+				data.p.isPromise = true;
+				data.m[0] = 'you';
+
 				expect(data.d.getFullYear()).to.equal(2018);
 				expect(events.join(',')).to.equal('innerHTML');
 

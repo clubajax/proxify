@@ -8,28 +8,31 @@
 
 	const noop = function () {};
 	const global = typeof window !== undefined ? window : global;
+	const instances = [Date, Promise, Map, Set, WeakMap, Error];
+	function isInstanceOf (data) {
+		return instances.some(I => data instanceof I);
+	}
 	function isSimpleObject (data) {
-		return typeof data === 'object' && data !== null && data !== global && !(data instanceof Date);
-
-		// arguments
-		// Promise
-		// Map, Set, WeakMap, WeakSet - clonedMap = new Map(originalMap)
-		// error
+		return typeof data === 'object' && data !== null && data !== global && !isInstanceOf(data);
 	}
 
 	return function proxify (data, options) {
 		const onSet = options.onSet || options.onChange || noop;
 		const onGet = options.onGet || noop;
+		const filter = options.filter || noop;
 		const validator = {
 			get (target, key) {
+				if (key === 'isProxy') {
+					return true;
+				}
 				// console.log('get key', typeof target[key], key, target);
 				onGet(key, target);
 				return target[key];
 
 			},
 			set (target, key, value) {
-				if (target[key] === value) {
-					return false;
+				if (target[key] === value || target.isProxy || filter(key)) {
+					return true;
 				}
 				// console.log('set', key, value, 't:', target);
 				target[key] = proxify(value, options);
