@@ -28,6 +28,29 @@
 		function copy (data) {
 			return JSON.parse(JSON.stringify(data));
 		}
+
+		test('it should log and copy (VISUAL)', function () {
+			let data = {
+				x: 1,
+				a: [1, 2, {
+					y: 2,
+					z: 3,
+					getValues: function () {
+						return [this.y, this.z]
+					}
+				}]
+			};
+			data = proxify(data);
+
+			const copy = data.copy();
+
+			console.log('COPY', copy);
+
+			data.log();
+
+			data.log('with', 'a', 'message');
+		});
+
 		test('it should proxify the entire object', function () {
 			let data = {
 				x: 1,
@@ -77,6 +100,7 @@
 					events.push(key);
 				},
 				filter (key) {
+					// console.log('filter', key, /z|o2/.test(key));
 					return /z|o2/.test(key);
 				}
 			});
@@ -86,6 +110,8 @@
 			data.o1 = { xx: 11 };
 			data.o1.xx = { yy: 22 };
 			data.o1.xx.yy = 3;
+
+			// will set o2, zz and z, but it will not be a proxy and will not generate an event
 			data.o2.z = 3;
 			data.o2 = { zz: 4 };
 			data.o2.zz = 44;

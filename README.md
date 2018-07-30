@@ -40,6 +40,9 @@ Signature:
 * **onChange:** called back when a property is set
 * **onSet:** same as `onChange`
 * **onGet:** called back when a property is accessed
+* **filter:** a function that returns a boolean. If the result is true, the passed data will not be proxified.
+properties will still be set, but events will not fire.
+
 
 ```jsx harmony
 const data = {
@@ -52,10 +55,21 @@ const data = {
 const proxifiedData = proxify(data, {
 	onChange: function (value, key, target) {
 		console.log('changed', key, value);
+	},
+	filter (key) {
+		return key !== 'foo';
 	}
 });
 ```
 
+### extras
+
+While debugging, a proxified object is difficult to inspect, because of the Proxy layers.
+To help with this, there are two methods, `copy` and `log`:
+
+    proxifiedData.copy(); // returns a non-proxy copy
+    proxifiedData.log(message); // sends a non-proxy copy to the console, with optionsla message
+   
 ## License
 
 This uses the [MIT license](./LICENSE). Feel free to use, and redistribute at will.
