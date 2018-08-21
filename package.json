@@ -1,6 +1,6 @@
 {
   "name": "@clubajax/proxify",
-  "version": "0.9.9",
+  "version": "0.9.10",
   "description": "Deep replace data with a new Proxy listeners ",
   "main": "src/proxify.js",
   "scripts": {
